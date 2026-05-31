@@ -19,31 +19,44 @@ verifyBtn.addEventListener('click', () => {
 
     mostrarResultado("Conectando con el servidor remoto...", "espera");
 
-    // Usamos un proxy público gratuito para evadir el bloqueo de CORS 
+   // Usamos el proxy público gratuito para evadir el bloqueo de CORS 
     const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
 
-    // Realizamos la llamada HTTP real utilizando fetch 
-    fetch(encodeURIComponent(url))
+    // Realizamos la llamada HTTP real uniendo el proxy con la URL del usuario
+    fetch(proxyUrl + encodeURIComponent(url))
         .then(response => {
-            // response.ok es verdadero si el servidor respondió con un código de éxito (200 al 299)
-            if (response.ok) {
+            // Si el código de red falla por completo (ej. 404 directo del proxy)
+            if (!response.ok) {
+                throw new Error("Error en el servidor proxy");
+            }
+            return response.text(); // Leemos el contenido real que nos devuelve el proxy
+        })
+        .then(texto => {
+            /* ¡El truco clave! Si la página externa no existe o falla, 
+               cors-anywhere incluye frases de error en su respuesta. 
+               Verificamos si el texto contiene mensajes de fallo comunes:
+            */
+            if (texto.includes("Missing required request header") || 
+                texto.includes("error") || 
+                texto.includes("not found") || 
+                texto.includes("Cannot GET")) {
+                
+                mostrarResultado("Error: La página no existe o el servidor remoto no respondió.", "error");
+            } else {
+                // Si no hay rastro de errores en el texto, el sitio es real y válido
                 mostrarResultado("¡Éxito! La página existe y respondió correctamente.", "exito");
                 
-                // Requisito optativo: abrir en nueva pestaña [cite: 24, 44]
+                // Requisito optativo: abrir en nueva pestaña
                 setTimeout(() => {
                     window.open(url, '_blank');
                 }, 1500);
-            } else {
-                // Si el servidor responde pero con códigos de error (ej. 404 Not Found, 500 Error) 
-                mostrarResultado(`Error del servidor: El sitio web respondió con un problema de red.`, "error");
             }
         })
         .catch(error => {
-            // Gestionar casos donde el dominio no existe en absoluto o no hay internet [cite: 43, 84]
+            // Gestionar casos donde el dominio no existe en absoluto o no hay internet
             console.error("Error de red detallado:", error);
-            mostrarResultado("Error de conexión: El dominio no existe o el servidor no respondió.", "error");
+            mostrarResultado("Error de conexión: El dominio no existe o está fuera de línea.", "error");
         });
-});
 
 // Función auxiliar para actualizar la retroalimentación visual [cite: 25, 88]
 function mostrarResultado(mensaje, tipo) {
