@@ -8,18 +8,18 @@ verifyBtn.addEventListener('click', () => {
 
     if (!url) {
         mostrarResultado("Por favor, ingresa una URL.", "error");
-        return; 
+        return;
     }
 
     // Autocompletar el protocolo si falta
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
-        urlInput.value = url; 
+        urlInput.value = url;
     }
 
     mostrarResultado("Conectando con el servidor remoto...", "espera");
 
-   // Usamos el proxy público gratuito para evadir el bloqueo de CORS 
+    // Usamos el proxy público gratuito para evadir el bloqueo de CORS 
     const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
 
     // Realizamos la llamada HTTP real uniendo el proxy con la URL del usuario
@@ -36,16 +36,16 @@ verifyBtn.addEventListener('click', () => {
                cors-anywhere incluye frases de error en su respuesta. 
                Verificamos si el texto contiene mensajes de fallo comunes:
             */
-            if (texto.includes("Missing required request header") || 
-                texto.includes("error") || 
-                texto.includes("not found") || 
+            if (texto.includes("Missing required request header") ||
+                texto.includes("error") ||
+                texto.includes("not found") ||
                 texto.includes("Cannot GET")) {
-                
+
                 mostrarResultado("Error: La página no existe o el servidor remoto no respondió.", "error");
             } else {
                 // Si no hay rastro de errores en el texto, el sitio es real y válido
                 mostrarResultado("¡Éxito! La página existe y respondió correctamente.", "exito");
-                
+
                 // Requisito optativo: abrir en nueva pestaña
                 setTimeout(() => {
                     window.open(url, '_blank');
@@ -57,7 +57,7 @@ verifyBtn.addEventListener('click', () => {
             console.error("Error de red detallado:", error);
             mostrarResultado("Error de conexión: El dominio no existe o está fuera de línea.", "error");
         });
-
+});
 // Función auxiliar para actualizar la retroalimentación visual [cite: 25, 88]
 function mostrarResultado(mensaje, tipo) {
     resultArea.textContent = mensaje;
