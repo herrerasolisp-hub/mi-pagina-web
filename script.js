@@ -1,4 +1,4 @@
-// 1. Seleccionamos los elementos de la interfaz [cite: 19, 20, 23]
+// 1. Seleccionamos los elementos de la interfaz
 const urlInput = document.getElementById('urlInput');
 const verifyBtn = document.getElementById('verifyBtn');
 const resultArea = document.getElementById('resultArea');
@@ -6,59 +6,52 @@ const resultArea = document.getElementById('resultArea');
 verifyBtn.addEventListener('click', () => {
     let url = urlInput.value.trim();
 
+    // Validación inicial: ¿El campo está vacío?
     if (!url) {
         mostrarResultado("Por favor, ingresa una URL.", "error");
-        return;
+        return; 
     }
 
-    // Autocompletar el protocolo si falta
+    // Autocompletar el protocolo si el usuario lo olvida (indispensable para GitHub Pages)
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url;
-        urlInput.value = url;
+        urlInput.value = url; 
     }
 
-    mostrarResultado("Conectando con el servidor remoto...", "espera");
+    mostrarResultado("Verificando disponibilidad de la página...", "espera");
 
-    // Usamos el proxy público gratuito para evadir el bloqueo de CORS 
-    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-
-    // Realizamos la llamada HTTP real uniendo el proxy con la URL del usuario
-    fetch(proxyUrl + encodeURIComponent(url))
-        .then(response => {
-            // Si el código de red falla por completo (ej. 404 directo del proxy)
-            if (!response.ok) {
-                throw new Error("Error en el servidor proxy");
-            }
-            return response.text(); // Leemos el contenido real que nos devuelve el proxy
-        })
-        .then(texto => {
-            /* ¡El truco clave! Si la página externa no existe o falla, 
-               cors-anywhere incluye frases de error en su respuesta. 
-               Verificamos si el texto contiene mensajes de fallo comunes:
-            */
-            if (texto.includes("Missing required request header") ||
-                texto.includes("error") ||
-                texto.includes("not found") ||
-                texto.includes("Cannot GET")) {
-
-                mostrarResultado("Error: La página no existe o el servidor remoto no respondió.", "error");
-            } else {
-                // Si no hay rastro de errores en el texto, el sitio es real y válido
+    /* 2. VALIDACIÓN NATIVA COMPLETA (Sin Proxy)
+       Utilizamos el constructor nativo 'new URL()' del navegador. 
+       Si la estructura de la dirección es falsa o imposible, el navegador arrojará un error de inmediato.
+    */
+    try {
+        const urlValidada = new URL(url);
+        
+        // Intentamos un fetch directo en modo 'no-cors'
+        // Esto envía una petición limpia a la red para ver si el servidor responde, sin que CORS bloquee la app
+        fetch(urlValidada, { mode: 'no-cors' })
+            .then(() => {
+                // Si la red procesa la petición (incluso si la página restringe CORS), significa que el servidor existe y está activo
                 mostrarResultado("¡Éxito! La página existe y respondió correctamente.", "exito");
-
-                // Requisito optativo: abrir en nueva pestaña
+                
+                // Abrir la URL en una nueva pestaña (Requisito optativo)
                 setTimeout(() => {
                     window.open(url, '_blank');
                 }, 1500);
-            }
-        })
-        .catch(error => {
-            // Gestionar casos donde el dominio no existe en absoluto o no hay internet
-            console.error("Error de red detallado:", error);
-            mostrarResultado("Error de conexión: El dominio no existe o está fuera de línea.", "error");
-        });
+            })
+            .catch(error => {
+                // Si el internet no encuentra el servidor (ej. el dominio no existe) cae aquí
+                console.error("Error de existencia:", error);
+                mostrarResultado("Error: El dominio no existe o el servidor está fuera de línea.", "error");
+            });
+
+    } catch (e) {
+        // Si 'new URL()' detecta que la escritura es inválida (ej: "https://...hola")
+        mostrarResultado("Error: La URL no tiene un formato válido.", "error");
+    }
 });
-// Función auxiliar para actualizar la retroalimentación visual [cite: 25, 88]
+
+// Función auxiliar para actualizar la retroalimentación visual (colores y bordes)
 function mostrarResultado(mensaje, tipo) {
     resultArea.textContent = mensaje;
     resultArea.style.backgroundColor = "transparent";
